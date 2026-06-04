@@ -1,128 +1,200 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Racer } from "@/lib/standings";
+import { RacerWithProjection } from "@/lib/season";
 
-const KART_EMOJIS = ["🏎️", "🚗", "🚕", "🛻", "🚙", "🏍️", "🛵", "🚐"];
-const HOTDOG_COLORS = [
-  "#FF6B35", // orange-red
-  "#FFD700", // gold
-  "#FF69B4", // hot pink
-  "#00CED1", // teal
-  "#7B68EE", // purple
-  "#32CD32", // lime
-  "#FF4500", // orange
-  "#1E90FF", // blue
+const KART_EMOJIS  = ["🏎️", "🚗", "🚕", "🛻", "🚙", "🏍️", "🛵", "🚐"];
+const LANE_COLORS  = [
+  "#FF6B35",
+  "#FFD700",
+  "#FF69B4",
+  "#00CED1",
+  "#7B68EE",
+  "#32CD32",
+  "#FF4500",
+  "#1E90FF",
 ];
 
-export default function RaceTrack({ racers }: { racers: Racer[] }) {
+interface Props {
+  racers: RacerWithProjection[];
+}
+
+export default function RaceTrack({ racers }: Props) {
   if (racers.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-slate-500 font-mono text-sm">
-        No racers yet — waiting for Google Form submissions...
+      <div
+        className="flex items-center justify-center h-32 rounded-2xl font-mono text-sm"
+        style={{
+          background: "rgba(10,10,25,0.95)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          color: "rgba(255,255,255,0.25)",
+        }}
+      >
+        No racers yet — waiting for submissions...
       </div>
     );
   }
 
-  const leaderTotal = Math.max(...racers.map((r) => r.total));
+  const leaderTotal = Math.max(...racers.map((r) => r.total), 1);
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto" style={{ paddingBottom: "100%" }}>
-      <div className="absolute inset-0">
-        {/* Outer track ring */}
-        <div
-          className="absolute inset-0 rounded-full"
-          style={{
-            background: "repeating-conic-gradient(#1a1a2e 0deg 10deg, #16213e 10deg 20deg)",
-            border: "6px solid #FFD700",
-            boxShadow: "0 0 40px rgba(255,215,0,0.3), inset 0 0 40px rgba(0,0,0,0.5)",
-          }}
-        />
-
-        {/* Infield grass */}
-        <div
-          className="absolute rounded-full flex flex-col items-center justify-center text-center"
-          style={{
-            inset: "18%",
-            background: "radial-gradient(ellipse at center, #1a4a1a 0%, #0d2b0d 100%)",
-            border: "3px dashed rgba(255,255,255,0.3)",
-          }}
+    <div
+      className="w-full max-w-2xl mx-auto rounded-2xl overflow-hidden"
+      style={{
+        background: "rgba(10,10,25,0.95)",
+        border: "1px solid rgba(255,255,255,0.07)",
+      }}
+    >
+      {/* Header */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{
+          borderBottom: "1px solid rgba(255,255,255,0.06)",
+          background: "rgba(255,255,255,0.02)",
+        }}
+      >
+        <span
+          className="font-black uppercase tracking-widest"
+          style={{ fontSize: "11px", color: "#FFD700", letterSpacing: "0.15em" }}
         >
-          <div className="text-yellow-400 font-black text-lg leading-tight">🌭 HOT BOI</div>
-          <div className="text-yellow-300 font-black text-lg leading-tight">CIRCUIT</div>
-          <div className="text-green-400 text-xs font-mono mt-1 opacity-70">LIVE</div>
-        </div>
+          🏁 Live Race Track
+        </span>
+        <span
+          className="font-mono text-xs"
+          style={{ color: "rgba(255,255,255,0.25)" }}
+        >
+           {racers.length > 1 && racers[1].total < leaderTotal
+            ? `${leaderTotal - racers[1].total} 🌭 behind the lead`
+            : "Tied for the lead"}
+        </span>
+      </div>
 
-        {/* Start / Finish line */}
-        <div
-          className="absolute"
-          style={{
-            top: "50%",
-            right: "8%",
-            width: "10%",
-            height: "3px",
-            background: "repeating-linear-gradient(90deg, white 0px, white 4px, black 4px, black 8px)",
-            transform: "translateY(-50%)",
-          }}
-        />
-
-        {/* Racers */}
+      {/* Lanes */}
+      <div className="p-4 space-y-3">
         {racers.map((racer, i) => {
-          // If leader has 0 dogs, spread racers evenly by rank
-          const progress =
-            leaderTotal === 0
-              ? i / Math.max(racers.length - 1, 1)
-              : racer.total / leaderTotal;
+          const color    = LANE_COLORS[i % LANE_COLORS.length];
+          const kart     = KART_EMOJIS[i % KART_EMOJIS.length];
+          const progress = leaderTotal > 0 ? racer.total / leaderTotal : 0;
 
-          // Map 0–1 progress to 0–300 degrees, starting at the top (–90°)
-          const angleDeg = progress * 300 - 90;
-          const angleRad = (angleDeg * Math.PI) / 180;
-
-          // Radius as % of the container (track centre is at 50%, 50%)
-          const radius = 34;
-          const x = 50 + Math.cos(angleRad) * radius;
-          const y = 50 + Math.sin(angleRad) * radius;
-
-          const color = HOTDOG_COLORS[i % HOTDOG_COLORS.length];
-          const kart = KART_EMOJIS[i % KART_EMOJIS.length];
+          // Kart sits at the end of the filled bar.
+          // We clamp between 0 and ~88% so the kart bubble stays visible.
+          const KART_WIDTH_PC = 10; // approximate width of kart bubble as % of track
+          const kartLeft = Math.max(0, Math.min(progress * (100 - KART_WIDTH_PC), 100 - KART_WIDTH_PC));
 
           return (
-            <motion.div
-              key={racer.name}
-              className="absolute flex flex-col items-center"
-              style={{
-                left: `${x}%`,
-                top: `${y}%`,
-                transform: "translate(-50%, -50%)",
-                zIndex: 10,
-              }}
-              animate={{ left: `${x}%`, top: `${y}%` }}
-              transition={{ type: "spring", stiffness: 50, damping: 14 }}
-            >
-              {/* Kart bubble */}
+            <div key={racer.name}>
+              {/* Racer label row */}
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="font-black uppercase tracking-wide"
+                    style={{ fontSize: "11px", color }}
+                  >
+                    {i === 0 ? "👑 " : `#${i + 1} `}
+                    {racer.name}
+                  </span>
+                </div>
+                <span
+                  className="font-black tabular-nums font-mono"
+                  style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)" }}
+                >
+                  {racer.total} 🌭
+                </span>
+              </div>
+
+              {/* Track lane */}
               <div
-                className="rounded-xl px-2 py-1 text-center shadow-lg"
+                className="relative w-full rounded-full overflow-visible"
                 style={{
-                  background: "rgba(10,10,20,0.92)",
-                  border: `2px solid ${color}`,
-                  minWidth: "56px",
-                  boxShadow: `0 0 12px ${color}55`,
+                  height: "28px",
+                  background: "rgba(255,255,255,0.04)",
+                  border: "1px solid rgba(255,255,255,0.06)",
                 }}
               >
-                <div style={{ fontSize: "16px", lineHeight: 1 }}>{kart}</div>
+                {/* Filled progress bar */}
+                <motion.div
+                  className="absolute top-0 left-0 h-full rounded-full"
+                  style={{
+                    background: `linear-gradient(90deg, ${color}33 0%, ${color}66 100%)`,
+                    borderRight: `2px solid ${color}`,
+                  }}
+                  animate={{ width: `${Math.max(progress * 100, 2)}%` }}
+                  transition={{ type: "spring", stiffness: 40, damping: 18 }}
+                />
+
+                {/* Dashed centre line */}
                 <div
-                  className="font-black uppercase tracking-tight leading-tight"
-                  style={{ fontSize: "9px", color: color, maxWidth: "60px" }}
+                  className="absolute inset-y-0 left-0 right-0 flex items-center pointer-events-none"
+                  style={{ paddingLeft: "4px", paddingRight: "4px" }}
                 >
-                  {racer.name.length > 8 ? racer.name.slice(0, 8) + "…" : racer.name}
+                  <div
+                    className="w-full"
+                    style={{
+                      height: "1px",
+                      background: "repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 6px, transparent 6px, transparent 12px)",
+                    }}
+                  />
                 </div>
-                <div className="font-bold" style={{ fontSize: "9px", color: "#FFD700" }}>
-                  {racer.total} 🌭
+
+                {/* Finish line at right edge */}
+                <div
+                  className="absolute right-0 top-0 bottom-0 w-3 rounded-r-full overflow-hidden flex flex-col"
+                  style={{ gap: "0" }}
+                >
+                  {Array.from({ length: 7 }).map((_, j) => (
+                    <div
+                      key={j}
+                      style={{
+                        flex: 1,
+                        background: j % 2 === 0 ? "rgba(255,255,255,0.25)" : "transparent",
+                      }}
+                    />
+                  ))}
                 </div>
+
+                {/* Kart marker */}
+                <motion.div
+                  className="absolute top-0 bottom-0 flex items-center"
+                  animate={{ left: `${kartLeft}%` }}
+                  transition={{ type: "spring", stiffness: 40, damping: 18 }}
+                  style={{ zIndex: 10 }}
+                >
+                  <div
+                    className="flex items-center gap-1 px-1.5 rounded-lg"
+                    style={{
+                      background: "rgba(8,8,20,0.95)",
+                      border: `1.5px solid ${color}`,
+                      boxShadow: `0 0 10px ${color}66`,
+                      height: "22px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <span style={{ fontSize: "13px", lineHeight: 1 }}>{kart}</span>
+                    <span
+                      className="font-black"
+                      style={{ fontSize: "9px", color, lineHeight: 1 }}
+                    >
+                      {racer.total}
+                    </span>
+                  </div>
+                </motion.div>
               </div>
-            </motion.div>
+            </div>
           );
         })}
+      </div>
+
+      {/* Footer — finish line label */}
+      <div
+        className="flex justify-end px-4 pb-3"
+        style={{ marginTop: "-4px" }}
+      >
+        <span
+          className="font-mono text-xs"
+          style={{ color: "rgba(255,255,255,0.2)" }}
+        >
+          🏁 finish
+        </span>
       </div>
     </div>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import Link from "next/link";
 import Leaderboard from "@/components/Leaderboard";
 import RaceTrack from "@/components/RaceTrack";
 import SeasonCountdown from "@/components/SeasonCountdown";
@@ -24,7 +25,6 @@ export default function Home() {
     }
   );
 
-  // Calculate season stats and projections client-side
   const season   = getSeasonStats();
   const standings: RacerWithProjection[] = rawStandings
     ? addProjections(rawStandings, season)
@@ -40,15 +40,13 @@ export default function Home() {
             border: "1px solid rgba(255,50,50,0.3)",
           }}
         >
-          <div style={{ fontSize: "40px" }}>⚠️</div>
+          <div style={{ fontSize: "40px" }}>Warning</div>
           <h2 className="text-red-400 font-black text-xl mt-3 mb-2 uppercase">
             Connection Error
           </h2>
           <p className="text-slate-400 text-sm leading-relaxed">
-            Could not load race data. Check that your{" "}
-            <code className="text-red-300 bg-red-900/30 px-1 rounded">GOOGLE_SHEET_ID</code>{" "}
-            in your <code className="text-red-300 bg-red-900/30 px-1 rounded">.env.local</code> is
-            correct and the sheet is shared publicly.
+            Could not load race data. Check that your GOOGLE_SHEET_ID in your
+            .env.local is correct and the sheet is shared publicly.
           </p>
           <p className="text-slate-500 text-xs mt-3 font-mono">Error: {error.message}</p>
         </div>
@@ -66,7 +64,7 @@ export default function Home() {
           "radial-gradient(ellipse at 80% 80%, rgba(255,215,0,0.05) 0%, transparent 50%)",
       }}
     >
-      {/* ── Header ── */}
+      {/* Header */}
       <header className="text-center mb-10 space-y-2">
         <div className="text-5xl mb-3">🌭🏁</div>
         <h1
@@ -78,7 +76,7 @@ export default function Home() {
             letterSpacing: "-0.02em",
           }}
         >
-          Hot Boi Glizzy Summer 
+          Hot Boi's eating Hot Dogs
         </h1>
         <h2
           className="font-black uppercase"
@@ -88,13 +86,13 @@ export default function Home() {
             letterSpacing: "0.15em",
           }}
         >
-          2026
+          Summer 2026
         </h2>
         <p
           className="font-mono text-xs tracking-widest"
           style={{ color: "rgba(255,255,255,0.3)" }}
         >
-          NASCAR-STYLE GLIZZY RACING BROADCAST LEAGUE
+          GLIZZY RACING BROADCAST NETWORK
         </p>
 
         {/* Live indicator */}
@@ -110,6 +108,24 @@ export default function Home() {
           <span className="text-green-400 text-xs font-mono font-bold tracking-widest">
             LIVE
           </span>
+        </div>
+
+        {/* Hall of Fame nav */}
+        <div className="flex justify-center mt-4">
+          <Link
+            href="/hall-of-fame"
+            className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 font-black uppercase transition-all duration-200"
+            style={{
+              fontSize: "11px",
+              background: "rgba(255,215,0,0.1)",
+              border: "1px solid rgba(255,215,0,0.3)",
+              color: "#FFD700",
+              letterSpacing: "0.15em",
+              textDecoration: "none",
+            }}
+          >
+            Hall of Fame
+          </Link>
         </div>
       </header>
 
@@ -130,26 +146,17 @@ export default function Home() {
         </div>
       ) : (
         <div className="max-w-2xl mx-auto space-y-8">
-
-          {/* Countdown */}
           <SeasonCountdown />
-
-          {/* Race Track */}
           <RaceTrack racers={standings} />
-
-          {/* AI Commentary */}
           <Commentary
             standings={standings}
             daysElapsed={season.daysElapsed}
             daysRemaining={season.daysRemaining}
           />
-
-          {/* Leaderboard with projections */}
           <Leaderboard
             standings={standings}
             percentComplete={season.percentComplete}
           />
-
           <p
             className="text-center font-mono text-xs"
             style={{ color: "rgba(255,255,255,0.2)" }}
